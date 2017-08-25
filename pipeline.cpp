@@ -1,45 +1,19 @@
+#include "nn.h"
 #include<vector>
-#include<mkl.h>
 
+int main(){
+  std::vector<int> layers = std::vector<int>();
+  layers.push_back(784);
+  layers.push_back(512);
+  layers.push_back(128);
+  layers.push_back(1);
 
-
-class NN {
-
-  private:
-     int num_layers;
-     int * sizes;
-     float *** weights;
-     float ** biases;
-  public:
-
-  NN(int num_layers, std::vector<int> sizes){
-    
-     this->num_layers = num_layers;
-     this->sizes = &sizes[0];
-     this->weights = new float**[num_layers];
-     this->biases = new float*[num_layers];
-     int prev_size = this->sizes[0];
-     
-
-     for (int i =1; i < num_layers; i ++){
-       float ** layer = new float*[prev_size];
-       for (int j = 0; j < prev_size; j ++){
-         layer[j] = new float[this->sizes[i]];
-       }
-       this->biases[i] = new float[this->sizes[i]];
-       this->weights[i] = layer;
-     }
-   }
-
-  float * forward_pass(float ** batch){
-    cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans,
-      1, 1, 1, 1, weights[0], 
-    return; 
-  }
-    
-  
-       
-  
-
-};
-     
+  int batch_size = 16384*128*2;
+  NN nn = NN(layers.size(), layers, batch_size);
+  float * batch = (float*)mkl_malloc(784 * batch_size * sizeof(float), 64);
+  assert(batch != NULL);
+  for (int i =0; i < 784*batch_size; i ++)
+    batch[i] = 1;
+  float * pred = nn.forward_pass(batch);
+  std::cout<< pred[0] << "\n";
+}
