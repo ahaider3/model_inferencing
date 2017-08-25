@@ -13,6 +13,8 @@ class NN {
      float ** weights;
      float ** biases;
      float ** outputs;
+     float ** outputs1;
+
   public:
 
   NN(int num_layers, std::vector<int> sizes, int batch_size){
@@ -32,15 +34,23 @@ class NN {
      for (int i = 1; i < num_layers; i ++){
 	float * layer = (float *)mkl_malloc(prev_size * this->sizes[i] * sizeof(float), 64);
 	this->weights[i] = layer;
-	float * bias = (float *)mkl_malloc(this->sizes[i] * sizeof(float), 64);
+	float * bias = (float *)mkl_malloc(batch_size * this->sizes[i] * sizeof(float), 64);
 	this->biases[i] = bias;
 	float * out = (float *)mkl_malloc(batch_size * this->sizes[i] * sizeof(float), 64);
 	this->outputs[i] = out;
-
      	assert(this->weights[i] != NULL &&
 	       this->outputs[i] != NULL &&
 	       this->biases[i] != NULL);
+	for(int j = 0;j < this->sizes[i] * prev_size; j++){
+		this->weights[i][j] = 1.0;
+	}
+	for(int j = 0;j < this->sizes[i] * batch_size; j++){
+		this->outputs[i][j] = 1.0;
+		this->biases[i][j] = 1.0;
 
+	}
+
+	prev_size = this->sizes[i];
         
      }
 
@@ -68,7 +78,10 @@ class NN {
 		1.0, input, k, this->weights[i],
 		n, 1, this->outputs[i], n);
       std::cout<< "Finished GEMM for Layer: " << i << "\n";
+      cblas_saxpy(m * this->sizes[i],1, this->biases[i],0,
+		this->outputs[i], 0);
       input = this->outputs[i];
+      
       k = n;
     }
     return input;

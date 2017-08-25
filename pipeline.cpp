@@ -8,7 +8,7 @@ int main(){
   layers.push_back(128);
   layers.push_back(1);
 
-  int batch_size = 16384*128*2;
+  int batch_size = 16;
   NN nn = NN(layers.size(), layers, batch_size);
   float * batch = (float*)mkl_malloc(784 * batch_size * sizeof(float), 64);
   assert(batch != NULL);
