@@ -25,8 +25,8 @@ class NN {
 	this->sizes[i] = sizes[i];
      this->weights = new float*[num_layers];
      this->outputs = new float*[num_layers];
-     std::cout<< "NUM LAYERS: " << this->num_layers << "\n" <<
- 	"BATCH SIZE: " << this->batch_size << "\n" ;
+//     std::cout<< "NUM LAYERS: " << this->num_layers << "\n" <<
+// 	"BATCH SIZE: " << this->batch_size << "\n" ;
 
      this->biases = new float*[num_layers];
      int prev_size = this->sizes[0];
@@ -77,7 +77,7 @@ class NN {
 		m, n, k,
 		1.0, input, k, this->weights[i],
 		n, 1, this->outputs[i], n);
-      std::cout<< "Finished GEMM for Layer: " << i << "\n";
+//      std::cout<< "Finished GEMM for Layer: " << i << "\n";
       cblas_saxpy(m * this->sizes[i],1, this->biases[i],0,
 		this->outputs[i], 0);
       input = this->outputs[i];
