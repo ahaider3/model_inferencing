@@ -16,7 +16,9 @@ class NN {
      float ** d_weights;
      float ** d_biases;
      float ** d_outputs;
+     float * input_batch;
 
+     cublasHandle_t handle;
 
   public:
 
@@ -29,7 +31,8 @@ class NN {
      this->weights = new float*[num_layers];
      this->outputs = new float*[num_layers];
 
-
+     cublasCreate(&(this->handle));
+     cudaMalloc(&input_batch, batch_size * this->sizes[0] * sizeof(float));
     
 //     std::cout<< "NUM LAYERS: " << this->num_layers << "\n" <<
 // 	"BATCH SIZE: " << this->batch_size << "\n" ;
@@ -52,6 +55,14 @@ class NN {
      	assert(this->weights[i] != NULL &&
 	       this->outputs[i] != NULL &&
 	       this->biases[i] != NULL);
+	float * d_layer, * d_bias, *d_out;
+	cudaMalloc(&d_layer, prev_size * this->sizes[i] * sizeof(float));
+	this->d_weights[i] = d_layer;
+	cudaMalloc(&d_bias, batch_size * this->sizes[i] * sizeof(float));
+	this->d_biases[i] = d_bias;
+	cudaMalloc(&d_out, batch_size * this->sizes[i] * sizeof(float));
+	this->d_outputs[i] = d_out;
+
 	for(int j = 0;j < this->sizes[i] * prev_size; j++){
 		this->weights[i][j] = 1.0;
 	}
@@ -60,13 +71,9 @@ class NN {
 		this->biases[i][j] = 1.0;
 
 	}
-	float * d_layer, * d_bias, *d_out;
-	cudaMalloc(&d_layer, prev_size * this->sizes[i] * sizeof(float));
-	this->d_weights[i] = d_layer;
-	cudaMalloc(&d_bias, batch_size * this->sizes[i] * sizeof(float));
-	this->d_biases[i] = d_bias;
-	cudaMalloc(&d_out, batch_size * this->sizes[i] * sizeof(float));
-	this->d_outputs[i] = d_out;
+	cudaMemcpy(this->d_weights[i], this->weights[i], this->sizes[i] * prev_size * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(this->d_biases[i], this->biases[i], this->sizes[i] * batch_size * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(this->d_outputs[i], this->outputs[i], this->sizes[i] * batch_size * sizeof(float), cudaMemcpyHostToDevice);
 
 
 	prev_size = this->sizes[i];
@@ -84,27 +91,37 @@ class NN {
    }
 
   float *  forward_pass(float * batch){
-//    float * in = (float *)mkl_malloc(2 * 784 * sizeof(float), 64);
- 
     
     int k = this->sizes[0];
     int m = this->batch_size;
-    float * input = batch;
+    float alf = 1;
+    cudaMemcpy(this->input_batch, batch, k * m * sizeof(float), cudaMemcpyHostToDevice);
+    float * input = this->input_batch;
     for (int i =1 ; i < this->num_layers; i ++){
       int n = this->sizes[i];
-      input = this->outputs[i];
-      
+      gpu_mult(input, this->d_weights[i], this->d_outputs[i], m, k, n);
+      cublasSaxpy(this->handle, m *n,  &alf, this->d_biases[i], 1, this->d_outputs[i], 1);
+
       k = n;
     }
     return input;
   }
   
+  void gpu_mult(const float * A, const float * B, float * C, int m, int k, int n){
+        float alf = 1;
+        float * alpha = & alf;
+	float bet = 0;
+	float * beta = &bet; 
+        cublasSgemm(this->handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alpha, A, m, B, k, beta, C, m);
+  } 
        
   ~NN(){
     for(int i = 1; i < this->num_layers; i ++){
 	free(this->weights[i]);
 	free(this->outputs[i]);
 	free(this->biases[i]);
+
+//	cublasDestroy(this->handle);
     }
    }
 
